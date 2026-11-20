@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz App</title>
+<style>
+  :root { --bg:#0c1222; --card:#151e33; --line:#26324d; --text:#e8eefc; --muted:#93a0bd; --accent:#60a5fa; --good:#22c55e; --bad:#ef4444; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif; background:var(--bg); color:var(--text); display:flex; justify-content:center; padding:32px 16px; min-height:100vh; }
+  main { width:100%; max-width:560px; }
+  h1 { margin:0 0 20px; font-size:1.6rem; text-align:center; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:24px; }
+  .cats { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; }
+  button { cursor:pointer; font-size:1rem; border-radius:10px; border:1px solid var(--line); background:#0f1729; color:var(--text); padding:14px; text-align:left; transition:border-color .15s, background .15s; }
+  button:hover:not(:disabled) { border-color:var(--accent); }
+  .cats button { text-align:center; font-weight:600; }
+  .cats span { display:block; font-size:1.8rem; margin-bottom:4px; }
+  .top { display:flex; justify-content:space-between; color:var(--muted); font-size:.9rem; margin-bottom:10px; }
+  .bar { height:6px; background:var(--line); border-radius:99px; overflow:hidden; margin-bottom:18px; }
+  .bar div { height:100%; background:var(--accent); transition:width .3s; }
+  .timer { height:4px; background:var(--line); border-radius:99px; overflow:hidden; margin:-10px 0 18px; }
+  .timer div { height:100%; background:#f59e0b; }
+  .q { font-size:1.2rem; font-weight:600; margin-bottom:18px; }
+  .opts { display:grid; gap:10px; }
+  .opts button.right { border-color:var(--good); background:rgba(34,197,94,.15); }
+  .opts button.wrong { border-color:var(--bad); background:rgba(239,68,68,.15); }
+  .next { margin-top:18px; width:100%; text-align:center; background:var(--accent); color:#0b1220; font-weight:700; border:none; }
+  .score { font-size:3rem; font-weight:800; text-align:center; color:var(--accent); margin:8px 0; }
+  .center { text-align:center; color:var(--muted); }
+  .best { text-align:center; color:var(--muted); margin-top:14px; font-size:.9rem; }
+  footer { color:var(--muted); font-size:.8rem; text-align:center; margin-top:20px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>🧠 Quiz App</h1>
+  <div class="card" id="app"></div>
+  <footer>Made by <a href="https://github.com/amaya514">Amaya Payagala</a></footer>
+</main>
+
+<script>
+const QUIZZES = {
+  "Web Dev": { icon: "💻", questions: [
+    { q: "What does HTML stand for?", a: ["HyperText Markup Language", "HighText Machine Language", "Hyperlink Text Mode Language", "Home Tool Markup Language"], c: 0 },
+    { q: "Which CSS property changes text colour?", a: ["font-color", "text-color", "color", "foreground"], c: 2 },
+    { q: "Which keyword declares a constant in JavaScript?", a: ["var", "let", "const", "static"], c: 2 },
+    { q: "What does `===` check in JavaScript?", a: ["Only value", "Value and type", "Only type", "Assignment"], c: 1 },
+    { q: "Which HTML tag makes the largest heading?", a: ["<h6>", "<head>", "<heading>", "<h1>"], c: 3 },
+    { q: "What does CSS stand for?", a: ["Cascading Style Sheets", "Computer Style Sheets", "Creative Style System", "Colorful Style Sheets"], c: 0 },
+  ]},
+  "Programming": { icon: "⌨️", questions: [
+    { q: "Which data structure works as First In, First Out?", a: ["Stack", "Queue", "Tree", "Graph"], c: 1 },
+    { q: "What is the time complexity of binary search?", a: ["O(n)", "O(n²)", "O(log n)", "O(1)"], c: 2 },
+    { q: "Which of these is NOT an OOP principle?", a: ["Encapsulation", "Inheritance", "Compilation", "Polymorphism"], c: 2 },
+    { q: "In Python, what does `len([1, 2, 3])` return?", a: ["2", "3", "4", "Error"], c: 1 },
+    { q: "Which language is mainly used for Android apps today?", a: ["Swift", "Kotlin", "Ruby", "PHP"], c: 1 },
+    { q: "What does SQL stand for?", a: ["Structured Query Language", "Simple Question Language", "System Query Logic", "Sequential Query List"], c: 0 },
+  ]},
+  "Sri Lanka": { icon: "🇱🇰", questions: [
+    { q: "What is the commercial capital of Sri Lanka?", a: ["Kandy", "Galle", "Colombo", "Jaffna"], c: 2 },
+    { q: "Which ancient rock fortress is a UNESCO World Heritage Site?", a: ["Sigiriya", "Adam's Peak", "Ella Rock", "Pidurangala"], c: 0 },
+    { q: "What is the national flower of Sri Lanka?", a: ["Lotus", "Blue water lily", "Jasmine", "Orchid"], c: 1 },
+    { q: "Which city is home to the Temple of the Tooth?", a: ["Anuradhapura", "Kandy", "Polonnaruwa", "Matara"], c: 1 },
+    { q: "In which year did Sri Lanka win the Cricket World Cup?", a: ["1992", "1996", "2007", "2011"], c: 1 },
+    { q: "What is Sri Lanka's longest river?", a: ["Kelani", "Kalu", "Mahaweli", "Walawe"], c: 2 },
+  ]},
+  "General": { icon: "🌍", questions: [
+    { q: "Which planet is known as the Red Planet?", a: ["Venus", "Mars", "Jupiter", "Mercury"], c: 1 },
+    { q: "What is the largest ocean on Earth?", a: ["Atlantic", "Indian", "Arctic", "Pacific"], c: 3 },
+    { q: "How many continents are there?", a: ["5", "6", "7", "8"], c: 2 },
+    { q: "What gas do plants absorb from the air?", a: ["Oxygen", "Nitrogen", "Carbon dioxide", "Helium"], c: 2 },
+    { q: "Who painted the Mona Lisa?", a: ["Van Gogh", "Picasso", "Leonardo da Vinci", "Michelangelo"], c: 2 },
+    { q: "What is the boiling point of water at sea level?", a: ["90°C", "100°C", "110°C", "120°C"], c: 1 },
+  ]},
+};
+const SECONDS = 15;
+const app = document.getElementById("app");
+let quiz, cat, index, score, timer, timeLeft;
+
+const esc = s => s.replace(/[&<>"]/g, ch => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[ch]));
+const shuffle = arr => arr.map(v => [Math.random(), v]).sort((x, y) => x[0] - y[0]).map(x => x[1]);
+function getBest(c) { try { return +localStorage.getItem("quiz-best-" + c) || 0; } catch { return 0; } }
+function setBest(c, v) { try { localStorage.setItem("quiz-best-" + c, v); } catch {} }
+
+function home() {
+  app.innerHTML = `<p class="center">Pick a topic. Each question has ${SECONDS} seconds.</p><div class="cats">` +
+    Object.entries(QUIZZES).map(([name, d]) =>
+      `<button data-cat="${name}"><span>${d.icon}</span>${name}<br><small style="color:var(--muted);font-weight:400">Best: ${getBest(name)}/${d.questions.length}</small></button>`).join("") +
+    `</div>`;
+  app.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => start(b.dataset.cat));
+}
+
+function start(c) {
+  cat = c;
+  quiz = shuffle(QUIZZES[c].questions).map(q => {
+    const order = shuffle(q.a.map((_, i) => i));
+    return { q: q.q, a: order.map(i => q.a[i]), c: order.indexOf(q.c) };
+  });
+  index = 0; score = 0;
+  show();
+}
+
+function show() {
+  const item = quiz[index];
+  app.innerHTML = `
+    <div class="top"><span>${cat} · Question ${index + 1} of ${quiz.length}</span><span>Score: ${score}</span></div>
+    <div class="bar"><div style="width:${index / quiz.length * 100}%"></div></div>
+    <div class="timer"><div id="t" style="width:100%"></div></div>
+    <div class="q">${esc(item.q)}</div>
+    <div class="opts">${item.a.map((t, i) => `<button data-i="${i}">${esc(t)}</button>`).join("")}</div>`;
+  app.querySelectorAll("[data-i]").forEach(b => b.onclick = () => answer(+b.dataset.i));
+  timeLeft = SECONDS * 10;
+  clearInterval(timer);
+  timer = setInterval(() => {
+    timeLeft--;
+    document.getElementById("t").style.width = (timeLeft / (SECONDS * 10) * 100) + "%";
+    if (timeLeft <= 0) answer(-1);
+  }, 100);
+}
+
+function answer(i) {
+  clearInterval(timer);
+  const item = quiz[index];
+  const buttons = app.querySelectorAll("[data-i]");
+  buttons.forEach(b => b.disabled = true);
+  buttons[item.c].classList.add("right");
+  if (i === item.c) score++;
+  else if (i >= 0) buttons[i].classList.add("wrong");
+  const next = document.createElement("button");
+  next.className = "next";
+  next.textContent = index + 1 < quiz.length ? "Next →" : "See results";
+  next.onclick = () => { index++; index < quiz.length ? show() : results(); };
+  app.appendChild(next);
+}
+
+function results() {
+  const best = Math.max(score, getBest(cat));
+  setBest(cat, best);
+  const pct = score / quiz.length;
+  const msg = pct === 1 ? "Perfect! 🏆" : pct >= .7 ? "Great job! 🎉" : pct >= .4 ? "Not bad! 👍" : "Keep practising! 💪";
+  app.innerHTML = `
+    <p class="center">${cat}</p>
+    <div class="score">${score} / ${quiz.length}</div>
+    <p class="center" style="font-size:1.2rem;color:var(--text)">${msg}</p>
+    <div class="best">Your best: ${best} / ${quiz.length}</div>
+    <button class="next" id="again">Play again</button>
+    <button class="next" id="home" style="background:transparent;color:var(--text);border:1px solid var(--line)">Choose another topic</button>`;
+  document.getElementById("again").onclick = () => start(cat);
+  document.getElementById("home").onclick = home;
+}
+
+home();
+</script>
+</body>
+</html>
